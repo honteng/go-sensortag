@@ -51,6 +51,15 @@ func explore(c ble.Client, p *ble.Profile) {
 	})
 	check(err)
 
+	err = cc2650.SubscribeSimpleKey(func(f bool) {
+		if f {
+			fmt.Println("pressed")
+		} else {
+			fmt.Println("released")
+		}
+	})
+	check(err)
+
 	time.Sleep(10 * time.Second)
 }
 

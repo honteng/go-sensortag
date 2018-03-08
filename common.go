@@ -184,3 +184,17 @@ func (c *CC2650) SubscribePressure(f func(float64, float64)) error {
 func (c *CC2650) UnsubscribePresure() error {
 	return c.client.Unsubscribe(c.chars[BAROMETRIC_PRESSURE_DATA_UUID], false)
 }
+
+func (c *CC2650) SubscribeSimpleKey(f func(bool)) error {
+	return c.client.Subscribe(c.chars[SIMPLE_KEY_DATA_UUID], false, func(b []byte) {
+		if b[0] == 1 {
+			f(true)
+		} else {
+			f(false)
+		}
+	})
+}
+
+func (c *CC2650) UnsubscribeSimpleKey() error {
+	return c.client.Unsubscribe(c.chars[SIMPLE_KEY_DATA_UUID], false)
+}
