@@ -46,13 +46,12 @@ func explore(c ble.Client, p *ble.Profile) {
 
 	cc2650.EnableIrTemperature()
 
-	for i := 0; i < 10; i++ {
-		v, err := cc2650.ReadIrTemperature()
-		check(err)
-		fmt.Println(v)
-		time.Sleep(time.Second)
-	}
+	err = cc2650.SubscribeIrTemperature(func(obj, amb float64) {
+		fmt.Printf("%v, %v\n", obj, amb)
+	})
+	check(err)
 
+	time.Sleep(10 * time.Second)
 }
 
 func main() {

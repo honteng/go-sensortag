@@ -1,6 +1,7 @@
 package sensortag
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"github.com/go-ble/ble"
@@ -104,12 +105,14 @@ func NewCC2650(c ble.Client, p *ble.Profile) (*CC2650, error) {
 
 }
 
-func (c *CC2650) ReadIrTemperature() (float64, error) {
-	fmt.Println("1==========")
-	b, err := c.client.ReadCharacteristic(c.chars[IR_TEMPERATURE_DATA_UUID])
-	fmt.Printf("%v\n", b)
-	fmt.Println("2==========")
-	return 0, err
+func (c *CC2650) SubscribeIrTemperature(f func(float64, float64)) error {
+
+	return c.client.Subscribe(c.chars[IR_TEMPERATURE_DATA_UUID], false, func(b []byte) {
+		obj := int16(binary.LittleEndian.Uint16(b[0:]))
+		amb := int16(binary.LittleEndian.Uint16(b[2:]))
+
+		f(float64(obj)/128.0, float64(amb)/128.0)
+	})
 }
 
 func (c *CC2650) EnableIrTemperature() error {
