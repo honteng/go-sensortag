@@ -105,8 +105,11 @@ func NewCC2650(c ble.Client, p *ble.Profile) (*CC2650, error) {
 
 }
 
-func (c *CC2650) SubscribeIrTemperature(f func(float64, float64)) error {
+func (c *CC2650) EnableIrTemperature() error {
+	return c.client.WriteCharacteristic(c.chars[IR_TEMPERATURE_CONFIG_UUID], []byte{0x01}, false)
+}
 
+func (c *CC2650) SubscribeIrTemperature(f func(float64, float64)) error {
 	return c.client.Subscribe(c.chars[IR_TEMPERATURE_DATA_UUID], false, func(b []byte) {
 		obj := int16(binary.LittleEndian.Uint16(b[0:]))
 		amb := int16(binary.LittleEndian.Uint16(b[2:]))
@@ -115,8 +118,26 @@ func (c *CC2650) SubscribeIrTemperature(f func(float64, float64)) error {
 	})
 }
 
-func (c *CC2650) EnableIrTemperature() error {
-	//WriteCharacteristic(c *Characteristic, value []byte, noRsp bool) error
-	return c.client.WriteCharacteristic(c.chars[IR_TEMPERATURE_CONFIG_UUID], []byte{0x01}, false)
+func (c *CC2650) UnsubscribeIrTemperature() error {
+	return c.client.Unsubscribe(c.chars[IR_TEMPERATURE_DATA_UUID], false)
+}
 
+func (c *CC2650) EnableHumidity() error {
+	return c.client.WriteCharacteristic(c.chars[HUMIDITY_CONFIG_UUID], []byte{0x01}, false)
+}
+
+func (c *CC2650) SubscribeHumidity(f func(float64, float64)) error {
+	return c.client.Subscribe(c.chars[HUMIDITY_DATA_UUID], false, func(b []byte) {
+		temp := int16(binary.LittleEndian.Uint16(b[0:]))
+		hmd := int16(binary.LittleEndian.Uint16(b[2:]))
+
+		temperature := -40 + ((165 * float64(temp)) / 65536.0)
+		humidity := float64(hmd) * 100 / 65536.0
+
+		f(humidity, temperature)
+	})
+}
+
+func (c *CC2650) UnsubscribeHumidity() error {
+	return c.client.Unsubscribe(c.chars[HUMIDITY_DATA_UUID], false)
 }
