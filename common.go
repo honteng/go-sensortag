@@ -3,6 +3,7 @@ package sensortag
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 
 	"github.com/go-ble/ble"
 )
@@ -140,4 +141,46 @@ func (c *CC2650) SubscribeHumidity(f func(float64, float64)) error {
 
 func (c *CC2650) UnsubscribeHumidity() error {
 	return c.client.Unsubscribe(c.chars[HUMIDITY_DATA_UUID], false)
+}
+
+func (c *CC2650) EnablePressure() error {
+	return c.client.WriteCharacteristic(c.chars[BAROMETRIC_PRESSURE_CONFIG_UUID], []byte{0x01}, false)
+}
+
+func (c *CC2650) SubscribePressure(f func(float64, float64)) error {
+	return c.client.Subscribe(c.chars[BAROMETRIC_PRESSURE_DATA_UUID], false, func(b []byte) {
+
+		// data is returned as
+		// Firmare 0.89 16 bit single precision float
+		// Firmare 1.01 24 bit single precision float
+
+		var tempBMP, pressure float64
+
+		if len(b) > 4 {
+			// Firmware 1.01
+			temp := binary.LittleEndian.Uint32(b[0:])
+			press := binary.LittleEndian.Uint32(b[2:])
+
+			tempBMP = float64(temp&0x00ffffff) / 100.0
+			pressure = float64((press>>8)&0x00ffffff) / 100.0
+		} else {
+			// Firmware 0.89
+			temp := binary.LittleEndian.Uint16(b[0:])
+			press := binary.LittleEndian.Uint16(b[2:])
+
+			tempExponent := float64((temp & 0xF000) >> 12)
+			tempMantissa := float64((temp & 0x0FFF))
+			tempBMP = tempMantissa * math.Pow(2, tempExponent) / 100.0
+
+			pressureExponent := float64((press & 0xF000) >> 12)
+			pressureMantissa := float64(press & 0x0FFF)
+			pressure = pressureMantissa * math.Pow(2, pressureExponent) / 100.0
+		}
+
+		f(tempBMP, pressure)
+	})
+}
+
+func (c *CC2650) UnsubscribePresure() error {
+	return c.client.Unsubscribe(c.chars[BAROMETRIC_PRESSURE_DATA_UUID], false)
 }
